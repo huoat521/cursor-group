@@ -1,0 +1,111 @@
+{
+  "name": "cursor-group-lease",
+  "displayName": "Cursor Group Lease",
+  "description": "从 Cursor Group 号池租用 Cursor 账号，并注入本机 Cursor 登录态",
+  "version": "0.1.1",
+  "publisher": "cursor-group",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:cursorGroupLease.panel"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cursorGroupLease.focusPanel",
+        "title": "Cursor Group Lease: 打开面板"
+      },
+      {
+        "command": "cursorGroupLease.login",
+        "title": "Cursor Group Lease: 登录（命令框，不依赖侧栏）"
+      },
+      {
+        "command": "cursorGroupLease.logout",
+        "title": "Cursor Group Lease: 退出登录"
+      },
+      {
+        "command": "cursorGroupLease.configure",
+        "title": "Cursor Group Lease: 登录（兼容）"
+      },
+      {
+        "command": "cursorGroupLease.acquire",
+        "title": "Cursor Group Lease: 租号"
+      },
+      {
+        "command": "cursorGroupLease.release",
+        "title": "Cursor Group Lease: 归还账号"
+      },
+      {
+        "command": "cursorGroupLease.rotate",
+        "title": "Cursor Group Lease: 换号"
+      }
+    ],
+    "configuration": {
+      "title": "Cursor Group Lease",
+      "properties": {
+        "cursorGroupLease.serverHost": {
+          "type": "string",
+          "default": "",
+          "description": "Cursor Group 服务器主机名或 IP（与 serverPort 配合使用）"
+        },
+        "cursorGroupLease.serverPort": {
+          "type": "number",
+          "default": 0,
+          "description": "Cursor Group 服务端口（0 表示未设置；与 serverHost 配合使用）"
+        },
+        "cursorGroupLease.serverBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "完整平台地址（优先于 serverHost/serverPort），例如 https://lease.example.com"
+        },
+        "cursorGroupLease.accessToken": {
+          "type": "string",
+          "default": "",
+          "description": "平台 Access Token / PAT。若已设置，将跳过用户名密码登录并直接使用 Bearer token"
+        },
+        "cursorGroupLease.autoAcquireOnStartup": {
+          "type": "boolean",
+          "default": false,
+          "description": "启动时自动租号并注入（需已登录）"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cursor-group-lease",
+          "title": "Group Lease",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "cursor-group-lease": [
+        {
+          "type": "webview",
+          "id": "cursorGroupLease.panel",
+          "name": "号池"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "package": "npx --yes @vscode/vsce package --allow-missing-repository --baseContentUrl https://example.com --baseImagesUrl https://example.com"
+  },
+  "dependencies": {
+    "sql.js": "^1.14.1"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.9.2"
+  }
+}

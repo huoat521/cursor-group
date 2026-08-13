@@ -1,0 +1,92 @@
+services:
+  mysql:
+    image: mysql:8.2.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: cursor_group
+      MYSQL_USER: cursor
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+    ports:
+      - "3307:3306"
+    volumes:
+      - cg_mysql:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - cg_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    env_file: .env
+    environment:
+      ASYNC_MYSQL_URI: mysql+aiomysql://cursor:${MYSQL_PASSWORD}@mysql:3306/cursor_group
+      REDIS_CACHED_URI: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/2
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+      - ./extension:/extension:ro
+
+  worker:
+    build: ./backend
+    env_file: .env
+    environment:
+      ASYNC_MYSQL_URI: mysql+aiomysql://cursor:${MYSQL_PASSWORD}@mysql:3306/cursor_group
+      REDIS_CACHED_URI: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/2
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    command: celery -A app.celery_app.celery_app worker -l info
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+
+  beat:
+    build: ./backend
+    env_file: .env
+    environment:
+      ASYNC_MYSQL_URI: mysql+aiomysql://cursor:${MYSQL_PASSWORD}@mysql:3306/cursor_group
+      REDIS_CACHED_URI: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/2
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    command: celery -A app.celery_app.celery_app beat -l info
+    depends_on:
+      - worker
+    volumes:
+      - ./backend/app:/app/app
+
+  web:
+    image: nginx:1.27-alpine
+    ports:
+      - "5173:80"
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+
+volumes:
+  cg_mysql:
+  cg_redis:
